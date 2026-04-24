@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import './App.css';
 
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxFyx8d8ZRsypQewf5lea7e9PnI94w-IoIMBI_unXhqgXYksQb0rLni6nwO7pUtFIiF/exec';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
