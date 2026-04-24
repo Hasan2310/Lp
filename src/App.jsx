@@ -22,7 +22,7 @@ const App = () => {
   // 📥 FETCH DATA
   const fetchData = async () => {
     try {
-      const res = await fetch("/api/sheet");
+      const res = await fetch("./api/sheet");
       const text = await res.text();
       const data = JSON.parse(text);
 
@@ -69,7 +69,7 @@ const App = () => {
   // 🌐 SYNC BACKEND (FIXED REAL API STYLE)
   const syncToSheet = async (action, item) => {
   try {
-    await fetch("/api/sheet", {
+    await fetch("./api/sheet", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
