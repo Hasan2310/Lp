@@ -20,24 +20,29 @@ const App = () => {
 
   // 📥 FETCH DATA
   const fetchData = async () => {
-    try {
-      const res = await fetch("/api/sheet");
-      const text = await res.text();
-      const data = JSON.parse(text);
+  try {
+    const res = await fetch("/api/sheet");
+    const data = await res.json();
 
-      const normalized = data.map(item => ({
-        id: item.ID,
-        kategori: item.Kategori,
-        label: item.Label,
-        val: Number(item.Val),
-        checked: item.Checked === true || item.Checked === 'true'
-      }));
-
-      setMasterData(normalized);
-    } catch (err) {
-      console.log('Fetch error:', err);
+    if (!Array.isArray(data)) {
+      console.log("API bukan array:", data);
+      return;
     }
-  };
+
+    const normalized = data.map(item => ({
+      id: item.ID,
+      kategori: item.Kategori,
+      label: item.Label,
+      val: Number(item.Val),
+      checked: item.Checked === true || item.Checked === 'true'
+    }));
+
+    setMasterData(normalized);
+
+  } catch (err) {
+    console.log("Fetch error:", err);
+  }
+};
 
   useEffect(() => {
     fetchData();
