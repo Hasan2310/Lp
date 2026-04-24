@@ -22,7 +22,7 @@ const App = () => {
   // 📥 FETCH DATA
   const fetchData = async () => {
     try {
-      const res = await fetch(WEB_APP_URL);
+      const res = await fetch("/api/sheet");
       const text = await res.text();
       const data = JSON.parse(text);
 
@@ -68,20 +68,20 @@ const App = () => {
 
   // 🌐 SYNC BACKEND (FIXED REAL API STYLE)
   const syncToSheet = async (action, item) => {
-    try {
-      await fetch(WEB_APP_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ action, data: item })
-      });
+  try {
+    await fetch("/api/sheet", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action, data: item })
+    });
 
-      fetchData();
-    } catch (err) {
-      console.log('Sync error:', err);
-    }
-  };
+    fetchData();
+  } catch (err) {
+    console.log('Sync error:', err);
+  }
+};
 
   // ➕ ADD / EDIT FORM
   const openForm = (mode, item = {}) => {
