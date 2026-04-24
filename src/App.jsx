@@ -73,17 +73,26 @@ const App = () => {
   // 🌐 SYNC BACKEND (FIXED REAL API STYLE)
   const syncToSheet = async (action, item) => {
   try {
-    await fetch("/api/sheet", {
-      method: 'POST',
+    const res = await fetch("/api/sheet", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({ action, data: item })
     });
 
+    const result = await res.json();
+
+    console.log("CRUD RESPONSE:", result);
+
+    if (!res.ok) {
+      throw new Error(result.error || "CRUD gagal");
+    }
+
     fetchData();
+
   } catch (err) {
-    console.log('Sync error:', err);
+    console.log("Sync error:", err);
   }
 };
 
