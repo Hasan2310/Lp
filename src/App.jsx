@@ -1,27 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import './App.css';
 import Login from "./components/login";
 import Loading from "./components/Loading";
+import './App.css';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [masterData, setMasterData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isAuth, setIsAuth] = useState(false);
 
-  // 🎨 SweetAlert theme
-  const swalStyle = {
-    background: '#1e1b2e',
-    color: '#fff',
-    confirmButtonColor: '#8b5cf6',
-    customClass: {
-      popup: 'rounded-3xl',
-      confirmButton: 'rounded-xl'
+  // 🔐 cek auth sekali saat app jalan
+  useEffect(() => {
+    const auth = localStorage.getItem("auth");
+    if (auth === "true") {
+      setIsAuth(true);
     }
-  };
+  }, []);
 
-  // 📥 FETCH DATA
+  // 📥 FETCH DATA (baru jalan kalau sudah login)
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -29,10 +26,7 @@ const App = () => {
       const res = await fetch("/api/sheet");
       const data = await res.json();
 
-      if (!Array.isArray(data)) {
-        console.log("API bukan array:", data);
-        return;
-      }
+      if (!Array.isArray(data)) return;
 
       const normalized = data.map(item => ({
         id: item.ID,
@@ -45,33 +39,26 @@ const App = () => {
       setMasterData(normalized);
 
     } catch (err) {
-      console.log("Fetch error:", err);
+      console.log(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔐 CEK AUTH (ONCE)
-  useEffect(() => {
-    const auth = localStorage.getItem("auth");
-    setIsAuth(auth === "true");
-  }, []);
-
-  // 📡 FETCH AFTER LOGIN
+  // 🚀 ambil data kalau sudah login
   useEffect(() => {
     if (isAuth) {
       fetchData();
     }
   }, [isAuth]);
 
-  // 💰 FORMAT RUPIAH
   const formatRupiah = (angka) =>
     new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR'
     }).format(angka);
 
-  // 🔍 FILTER DATA
+  // 🔍 filter data
   const pemasukan = masterData.filter(i => i.kategori === 'Pemasukan');
   const pengeluaranTetap = masterData.filter(i => i.kategori === 'PengeluaranTetap');
   const pengeluaranOpsional = masterData.filter(i => i.kategori === 'PengeluaranOpsional');
@@ -86,7 +73,7 @@ const App = () => {
 
   const totalKeluar = totalTetap + totalOpsionalChecked;
 
-  // 🌐 SYNC BACKEND
+  // 🌐 sync backend
   const syncToSheet = async (action, item) => {
     try {
       const res = await fetch("/api/sheet", {
@@ -95,40 +82,34 @@ const App = () => {
         body: JSON.stringify({ action, data: item })
       });
 
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.error || "CRUD gagal");
-      }
-
+      await res.json();
       fetchData();
 
     } catch (err) {
-      console.log("Sync error:", err);
+      console.log(err);
     }
   };
 
-  // ➕ FORM
+  // ➕ form
   const openForm = (mode, item = {}) => {
     Swal.fire({
-      ...swalStyle,
       title: mode === 'ADD' ? 'Tambah Data' : 'Edit Data',
+      background: '#1e1b2e',
+      color: '#fff',
+      showCancelButton: true,
+      confirmButtonColor: '#8b5cf6',
       html: `
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <input id="label" class="swal2-input" placeholder="Nama"
-            value="${item.label || ''}"
-            style="border-radius:14px;background:#1b1430;color:#fff;border:1px solid #2d2550;">
+        <input id="label" class="swal2-input" placeholder="Nama"
+          value="${item.label || ''}" />
 
-          <input id="val" type="number" class="swal2-input" placeholder="Nominal"
-            value="${item.val || ''}"
-            style="border-radius:14px;background:#1b1430;color:#fff;border:1px solid #2d2550;">
-        </div>
+        <input id="val" type="number" class="swal2-input" placeholder="Nominal"
+          value="${item.val || ''}" />
       `,
       preConfirm: () => ({
         label: document.getElementById('label').value,
         val: Number(document.getElementById('val').value)
       })
-    }).then((res) => {
+    }).then(res => {
       if (!res.isConfirmed) return;
 
       if (mode === 'ADD') {
@@ -144,22 +125,23 @@ const App = () => {
     });
   };
 
-  // ❌ DELETE
   const deleteItem = (item) => {
     Swal.fire({
-      ...swalStyle,
       title: 'Hapus data?',
       showCancelButton: true,
-      confirmButtonText: 'Hapus',
-      confirmButtonColor: '#ef4444'
-    }).then((res) => {
-      if (res.isConfirmed) syncToSheet('DELETE', item);
+      confirmButtonColor: '#ef4444',
+      background: '#1e1b2e',
+      color: '#fff'
+    }).then(res => {
+      if (res.isConfirmed) {
+        syncToSheet('DELETE', item);
+      }
     });
   };
 
-  // 🧾 ROW
-  const ItemRow = ({ item, showCheck, colorClass }) => (
-    <div className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl mb-2">
+  // 🧾 row
+  const ItemRow = ({ item, colorClass, showCheck }) => (
+    <div className="flex items-center gap-3 p-3 bg-white rounded-2xl mb-2">
 
       {showCheck && (
         <input
@@ -171,30 +153,24 @@ const App = () => {
         />
       )}
 
-      <div className={`flex-1 ${item.checked ? 'opacity-40' : ''}`}>
-        <p className="text-sm font-bold text-black">{item.label}</p>
-        <p className={`text-xs font-black ${colorClass}`}>
+      <div className="flex-1">
+        <p className="text-black font-bold text-sm">{item.label}</p>
+        <p className={`text-xs font-bold ${colorClass}`}>
           {formatRupiah(item.val)}
         </p>
       </div>
 
-      <button
-        onClick={() => openForm('EDIT', item)}
-        className="text-xs text-violet-500 font-bold"
-      >
+      <button onClick={() => openForm('EDIT', item)} className="text-violet-500 text-xs font-bold">
         EDIT
       </button>
 
-      <button
-        onClick={() => deleteItem(item)}
-        className="text-xs text-red-500 font-bold"
-      >
+      <button onClick={() => deleteItem(item)} className="text-red-500 text-xs font-bold">
         X
       </button>
     </div>
   );
 
-  // 🔐 LOGIN GATE
+  // 🔐 LOGIN GATE (HARUS PALING ATAS LOGIC RENDER)
   if (!isAuth) {
     return (
       <Login
@@ -206,12 +182,12 @@ const App = () => {
     );
   }
 
-  // ⏳ LOADING
+  // ⏳ LOADING GATE
   if (loading) {
     return <Loading />;
   }
 
-  // 📱 UI
+  // 📱 UI MAIN
   return (
     <div className="min-h-screen bg-[#0f0b1a] p-4 text-white">
       <div className="max-w-md mx-auto">
@@ -220,7 +196,6 @@ const App = () => {
           Keuangan Hasan
         </h1>
 
-        {/* 💜 SALDO */}
         <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-5 rounded-2xl mt-3">
           <p className="text-xs opacity-70">Saldo Bersih</p>
           <p className="text-2xl font-bold">
@@ -247,46 +222,34 @@ const App = () => {
 
         {/* CONTENT */}
         {activeTab === 'dashboard' && (
-          <div className="mt-4 space-y-5">
-            <Section title="Pemasukan" list={pemasukan} color="text-green-400" add />
-            <Section title="Pengeluaran Tetap" list={pengeluaranTetap} color="text-red-400" add />
-            <Section title="Opsional" list={pengeluaranOpsional} color="text-yellow-400" check add />
+          <div className="mt-4 space-y-4">
+            <Section title="Pemasukan" list={pemasukan} color="text-green-400" />
+            <Section title="Pengeluaran Tetap" list={pengeluaranTetap} color="text-red-400" />
+            <Section title="Opsional" list={pengeluaranOpsional} color="text-yellow-400" />
           </div>
         )}
 
         {activeTab === 'paylater' && (
-          <Section title="Paylater" list={paylaterData} color="text-violet-400" add />
+          <Section title="Paylater" list={paylaterData} color="text-violet-400" />
         )}
 
         {activeTab === 'utang' && (
-          <Section title="Utang" list={utangData} color="text-red-400" add />
+          <Section title="Utang" list={utangData} color="text-red-400" />
         )}
 
       </div>
     </div>
   );
 
-  function Section({ title, list, color, check, add }) {
+  function Section({ title, list, color }) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-xs font-bold text-gray-400">{title}</h3>
-
-          {add && (
-            <button
-              onClick={() => openForm('ADD', { kategori: title })}
-              className="text-xs bg-violet-600 px-3 py-1 rounded-lg font-bold"
-            >
-              + Tambah
-            </button>
-          )}
-        </div>
+        <h3 className="text-xs text-gray-400 mb-2">{title}</h3>
 
         {list.map(i => (
           <ItemRow
             key={i.id}
             item={i}
-            showCheck={check}
             colorClass={color}
           />
         ))}
