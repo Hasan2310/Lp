@@ -51,15 +51,13 @@ const App = () => {
     }
   };
 
-  // 🔐 CHECK AUTH ON LOAD
+  // 🔐 CEK AUTH (ONCE)
   useEffect(() => {
     const auth = localStorage.getItem("auth");
-    if (auth === "true") {
-      setIsAuth(true);
-    }
+    setIsAuth(auth === "true");
   }, []);
 
-  // 📡 FETCH ONLY AFTER LOGIN
+  // 📡 FETCH AFTER LOGIN
   useEffect(() => {
     if (isAuth) {
       fetchData();
@@ -73,7 +71,7 @@ const App = () => {
       currency: 'IDR'
     }).format(angka);
 
-  // 🔍 FILTER
+  // 🔍 FILTER DATA
   const pemasukan = masterData.filter(i => i.kategori === 'Pemasukan');
   const pengeluaranTetap = masterData.filter(i => i.kategori === 'PengeluaranTetap');
   const pengeluaranOpsional = masterData.filter(i => i.kategori === 'PengeluaranOpsional');
@@ -93,9 +91,7 @@ const App = () => {
     try {
       const res = await fetch("/api/sheet", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, data: item })
       });
 
