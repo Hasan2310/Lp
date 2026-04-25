@@ -10,15 +10,13 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [isAuth, setIsAuth] = useState(false);
 
-  // 🔐 cek auth sekali saat app jalan
+  // 🔐 AUTH CHECK
   useEffect(() => {
     const auth = localStorage.getItem("auth");
-    if (auth === "true") {
-      setIsAuth(true);
-    }
+    if (auth === "true") setIsAuth(true);
   }, []);
 
-  // 📥 FETCH DATA (baru jalan kalau sudah login)
+  // 📥 FETCH DATA
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -45,20 +43,18 @@ const App = () => {
     }
   };
 
-  // 🚀 ambil data kalau sudah login
   useEffect(() => {
-    if (isAuth) {
-      fetchData();
-    }
+    if (isAuth) fetchData();
   }, [isAuth]);
 
+  // 💰 FORMAT
   const formatRupiah = (angka) =>
     new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR'
     }).format(angka);
 
-  // 🔍 filter data
+  // 🔍 FILTER
   const pemasukan = masterData.filter(i => i.kategori === 'Pemasukan');
   const pengeluaranTetap = masterData.filter(i => i.kategori === 'PengeluaranTetap');
   const pengeluaranOpsional = masterData.filter(i => i.kategori === 'PengeluaranOpsional');
@@ -73,7 +69,7 @@ const App = () => {
 
   const totalKeluar = totalTetap + totalOpsionalChecked;
 
-  // 🌐 sync backend
+  // 🌐 SYNC BACKEND (FIXED)
   const syncToSheet = async (action, item) => {
     try {
       const res = await fetch("/api/sheet", {
@@ -82,7 +78,10 @@ const App = () => {
         body: JSON.stringify({ action, data: item })
       });
 
-      await res.json();
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.error || "CRUD gagal");
+
       fetchData();
 
     } catch (err) {
@@ -90,7 +89,7 @@ const App = () => {
     }
   };
 
-  // ➕ form
+  // ➕ ADD / EDIT (FIXED SWEETALERT)
   const openForm = (mode, item = {}) => {
     Swal.fire({
       title: mode === 'ADD' ? 'Tambah Data' : 'Edit Data',
@@ -98,40 +97,58 @@ const App = () => {
       color: '#fff',
       showCancelButton: true,
       confirmButtonColor: '#8b5cf6',
+      focusConfirm: false,
+
       html: `
         <input id="label" class="swal2-input" placeholder="Nama"
-          value="${item.label || ''}" />
+          value="${item.label || ''}">
 
         <input id="val" type="number" class="swal2-input" placeholder="Nominal"
-          value="${item.val || ''}" />
+          value="${item.val || ''}">
       `,
-      preConfirm: () => ({
-        label: document.getElementById('label').value,
-        val: Number(document.getElementById('val').value)
-      })
+
+      preConfirm: () => {
+        const label = document.getElementById('label').value;
+        const val = Number(document.getElementById('val').value);
+
+        if (!label || !val) {
+          Swal.showValidationMessage("Isi dulu yang bener 😭");
+          return false;
+        }
+
+        return { label, val };
+      }
     }).then(res => {
       if (!res.isConfirmed) return;
 
       if (mode === 'ADD') {
         syncToSheet('ADD', {
-          id: Date.now(),
+          id: crypto.randomUUID(),
           kategori: item.kategori,
           ...res.value,
           checked: false
         });
-      } else {
-        syncToSheet('EDIT', { ...item, ...res.value });
+      }
+
+      if (mode === 'EDIT') {
+        syncToSheet('EDIT', {
+          ...item,
+          ...res.value
+        });
       }
     });
   };
 
+  // ❌ DELETE (FIXED)
   const deleteItem = (item) => {
     Swal.fire({
       title: 'Hapus data?',
+      text: "Data bakal hilang permanen",
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       background: '#1e1b2e',
-      color: '#fff'
+      color: '#fff',
+      confirmButtonText: 'Hapus'
     }).then(res => {
       if (res.isConfirmed) {
         syncToSheet('DELETE', item);
@@ -139,7 +156,7 @@ const App = () => {
     });
   };
 
-  // 🧾 row
+  // 🧾 ROW
   const ItemRow = ({ item, colorClass, showCheck }) => (
     <div className="flex items-center gap-3 p-3 bg-white rounded-2xl mb-2">
 
@@ -170,7 +187,7 @@ const App = () => {
     </div>
   );
 
-  // 🔐 LOGIN GATE (HARUS PALING ATAS LOGIC RENDER)
+  // 🔐 LOGIN GATE
   if (!isAuth) {
     return (
       <Login
@@ -182,12 +199,10 @@ const App = () => {
     );
   }
 
-  // ⏳ LOADING GATE
-  if (loading) {
-    return <Loading />;
-  }
+  // ⏳ LOADING
+  if (loading) return <Loading />;
 
-  // 📱 UI MAIN
+  // 📱 UI
   return (
     <div className="min-h-screen bg-[#0f0b1a] p-4 text-white">
       <div className="max-w-md mx-auto">
@@ -196,6 +211,7 @@ const App = () => {
           Keuangan Hasan
         </h1>
 
+        {/* SALDO */}
         <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-5 rounded-2xl mt-3">
           <p className="text-xs opacity-70">Saldo Bersih</p>
           <p className="text-2xl font-bold">
