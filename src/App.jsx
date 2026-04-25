@@ -79,7 +79,8 @@ const App = () => {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
+
+      if (!res.ok) throw new Error(result.error || "CRUD gagal");
 
       fetchData();
 
@@ -88,7 +89,7 @@ const App = () => {
     }
   };
 
-  // ➕ ADD / EDIT (FIXED FULL)
+  // ➕ ADD / EDIT (FIXED FULL + VALIDATION + UUID)
   const openForm = (mode, item = {}) => {
     Swal.fire({
       title: mode === 'ADD' ? 'Tambah Data' : 'Edit Data',
@@ -99,10 +100,10 @@ const App = () => {
 
       html: `
         <input id="label" class="swal2-input" placeholder="Nama"
-          value="${item.label || ''}">
+          value="${item.label || ''}" />
 
         <input id="val" type="number" class="swal2-input" placeholder="Nominal"
-          value="${item.val || ''}">
+          value="${item.val || ''}" />
       `,
 
       preConfirm: () => {
@@ -137,7 +138,7 @@ const App = () => {
     });
   };
 
-  // ❌ DELETE (FIXED)
+  // ❌ DELETE FIXED
   const deleteItem = (item) => {
     Swal.fire({
       title: 'Hapus data?',
@@ -163,7 +164,10 @@ const App = () => {
           type="checkbox"
           checked={!!item.checked}
           onChange={() =>
-            syncToSheet('EDIT', { ...item, checked: !item.checked })
+            syncToSheet('EDIT', {
+              ...item,
+              checked: !item.checked
+            })
           }
         />
       )}
@@ -191,7 +195,7 @@ const App = () => {
     </div>
   );
 
-  // 🔐 LOGIN
+  // 🔐 LOGIN GATE (INI WAJIB ADA)
   if (!isAuth) {
     return (
       <Login
@@ -203,7 +207,7 @@ const App = () => {
     );
   }
 
-  // ⏳ LOADING
+  // ⏳ LOADING GATE
   if (loading) return <Loading />;
 
   // 📱 UI
