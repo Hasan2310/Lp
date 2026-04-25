@@ -47,7 +47,7 @@ const App = () => {
     if (isAuth) fetchData();
   }, [isAuth]);
 
-  // 💰 FORMAT
+  // 💰 FORMAT RUPIAH
   const formatRupiah = (angka) =>
     new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -69,7 +69,7 @@ const App = () => {
 
   const totalKeluar = totalTetap + totalOpsionalChecked;
 
-  // 🌐 SYNC BACKEND (FIXED)
+  // 🌐 SYNC BACKEND
   const syncToSheet = async (action, item) => {
     try {
       const res = await fetch("/api/sheet", {
@@ -79,8 +79,7 @@ const App = () => {
       });
 
       const result = await res.json();
-
-      if (!res.ok) throw new Error(result.error || "CRUD gagal");
+      if (!res.ok) throw new Error(result.error);
 
       fetchData();
 
@@ -89,7 +88,7 @@ const App = () => {
     }
   };
 
-  // ➕ ADD / EDIT (FIXED SWEETALERT)
+  // ➕ ADD / EDIT (FIXED FULL)
   const openForm = (mode, item = {}) => {
     Swal.fire({
       title: mode === 'ADD' ? 'Tambah Data' : 'Edit Data',
@@ -97,7 +96,6 @@ const App = () => {
       color: '#fff',
       showCancelButton: true,
       confirmButtonColor: '#8b5cf6',
-      focusConfirm: false,
 
       html: `
         <input id="label" class="swal2-input" placeholder="Nama"
@@ -144,10 +142,10 @@ const App = () => {
     Swal.fire({
       title: 'Hapus data?',
       text: "Data bakal hilang permanen",
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
       background: '#1e1b2e',
       color: '#fff',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
       confirmButtonText: 'Hapus'
     }).then(res => {
       if (res.isConfirmed) {
@@ -177,17 +175,23 @@ const App = () => {
         </p>
       </div>
 
-      <button onClick={() => openForm('EDIT', item)} className="text-violet-500 text-xs font-bold">
+      <button
+        onClick={() => openForm('EDIT', item)}
+        className="text-violet-500 text-xs font-bold"
+      >
         EDIT
       </button>
 
-      <button onClick={() => deleteItem(item)} className="text-red-500 text-xs font-bold">
+      <button
+        onClick={() => deleteItem(item)}
+        className="text-red-500 text-xs font-bold"
+      >
         X
       </button>
     </div>
   );
 
-  // 🔐 LOGIN GATE
+  // 🔐 LOGIN
   if (!isAuth) {
     return (
       <Login
@@ -241,7 +245,7 @@ const App = () => {
           <div className="mt-4 space-y-4">
             <Section title="Pemasukan" list={pemasukan} color="text-green-400" />
             <Section title="Pengeluaran Tetap" list={pengeluaranTetap} color="text-red-400" />
-            <Section title="Opsional" list={pengeluaranOpsional} color="text-yellow-400" />
+            <Section title="Opsional" list={pengeluaranOpsional} color="text-yellow-400" showCheck />
           </div>
         )}
 
@@ -257,16 +261,26 @@ const App = () => {
     </div>
   );
 
-  function Section({ title, list, color }) {
+  function Section({ title, list, color, showCheck }) {
     return (
       <div>
-        <h3 className="text-xs text-gray-400 mb-2">{title}</h3>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-xs text-gray-400">{title}</h3>
+
+          <button
+            onClick={() => openForm('ADD', { kategori: title })}
+            className="text-xs bg-violet-600 px-3 py-1 rounded-lg font-bold"
+          >
+            + Tambah
+          </button>
+        </div>
 
         {list.map(i => (
           <ItemRow
             key={i.id}
             item={i}
             colorClass={color}
+            showCheck={showCheck}
           />
         ))}
       </div>
