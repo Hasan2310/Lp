@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import Login from "./components/login";
-import Loading from "./components/Loading";
+import Loading from "./components/loading";
 import './App.css';
 
 const App = () => {
