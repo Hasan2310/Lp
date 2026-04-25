@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import './App.css';
-
+import Login from "./components/login";
+import Loading from "./components/Loading";
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [masterData, setMasterData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isAuth, setIsAuth] = useState(false);
 
   // 🎨 SweetAlert theme
   const swalStyle = {
@@ -20,33 +23,48 @@ const App = () => {
 
   // 📥 FETCH DATA
   const fetchData = async () => {
-  try {
-    const res = await fetch("/api/sheet");
-    const data = await res.json();
+    try {
+      setLoading(true);
 
-    if (!Array.isArray(data)) {
-      console.log("API bukan array:", data);
-      return;
+      const res = await fetch("/api/sheet");
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        console.log("API bukan array:", data);
+        return;
+      }
+
+      const normalized = data.map(item => ({
+        id: item.ID,
+        kategori: item.Kategori,
+        label: item.Label,
+        val: Number(item.Val),
+        checked: item.Checked === true || item.Checked === 'true'
+      }));
+
+      setMasterData(normalized);
+
+    } catch (err) {
+      console.log("Fetch error:", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const normalized = data.map(item => ({
-      id: item.ID,
-      kategori: item.Kategori,
-      label: item.Label,
-      val: Number(item.Val),
-      checked: item.Checked === true || item.Checked === 'true'
-    }));
-
-    setMasterData(normalized);
-
-  } catch (err) {
-    console.log("Fetch error:", err);
-  }
-};
-
+  // 🔐 CHECK AUTH ON LOAD
   useEffect(() => {
-    fetchData();
+    const auth = localStorage.getItem("auth");
+    if (auth === "true") {
+      setIsAuth(true);
+    }
   }, []);
+
+  // 📡 FETCH ONLY AFTER LOGIN
+  useEffect(() => {
+    if (isAuth) {
+      fetchData();
+    }
+  }, [isAuth]);
 
   // 💰 FORMAT RUPIAH
   const formatRupiah = (angka) =>
@@ -70,33 +88,31 @@ const App = () => {
 
   const totalKeluar = totalTetap + totalOpsionalChecked;
 
-  // 🌐 SYNC BACKEND (FIXED REAL API STYLE)
+  // 🌐 SYNC BACKEND
   const syncToSheet = async (action, item) => {
-  try {
-    const res = await fetch("/api/sheet", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ action, data: item })
-    });
+    try {
+      const res = await fetch("/api/sheet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ action, data: item })
+      });
 
-    const result = await res.json();
+      const result = await res.json();
 
-    console.log("CRUD RESPONSE:", result);
+      if (!res.ok) {
+        throw new Error(result.error || "CRUD gagal");
+      }
 
-    if (!res.ok) {
-      throw new Error(result.error || "CRUD gagal");
+      fetchData();
+
+    } catch (err) {
+      console.log("Sync error:", err);
     }
+  };
 
-    fetchData();
-
-  } catch (err) {
-    console.log("Sync error:", err);
-  }
-};
-
-  // ➕ ADD / EDIT FORM
+  // ➕ FORM
   const openForm = (mode, item = {}) => {
     Swal.fire({
       ...swalStyle,
@@ -145,7 +161,7 @@ const App = () => {
     });
   };
 
-  // 🧾 ROW UI
+  // 🧾 ROW
   const ItemRow = ({ item, showCheck, colorClass }) => (
     <div className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl mb-2">
 
@@ -182,6 +198,23 @@ const App = () => {
     </div>
   );
 
+  // 🔐 LOGIN GATE
+  if (!isAuth) {
+    return (
+      <Login
+        onSuccess={() => {
+          localStorage.setItem("auth", "true");
+          setIsAuth(true);
+        }}
+      />
+    );
+  }
+
+  // ⏳ LOADING
+  if (loading) {
+    return <Loading />;
+  }
+
   // 📱 UI
   return (
     <div className="min-h-screen bg-[#0f0b1a] p-4 text-white">
@@ -191,7 +224,7 @@ const App = () => {
           Keuangan Hasan
         </h1>
 
-        {/* 💜 SALDO BERSIH */}
+        {/* 💜 SALDO */}
         <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-5 rounded-2xl mt-3">
           <p className="text-xs opacity-70">Saldo Bersih</p>
           <p className="text-2xl font-bold">
@@ -216,7 +249,7 @@ const App = () => {
           ))}
         </div>
 
-        {/* DASHBOARD */}
+        {/* CONTENT */}
         {activeTab === 'dashboard' && (
           <div className="mt-4 space-y-5">
             <Section title="Pemasukan" list={pemasukan} color="text-green-400" add />
@@ -225,12 +258,10 @@ const App = () => {
           </div>
         )}
 
-        {/* PAYLATER */}
         {activeTab === 'paylater' && (
           <Section title="Paylater" list={paylaterData} color="text-violet-400" add />
         )}
 
-        {/* UTANG */}
         {activeTab === 'utang' && (
           <Section title="Utang" list={utangData} color="text-red-400" add />
         )}
